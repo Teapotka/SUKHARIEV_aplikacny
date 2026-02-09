@@ -47,7 +47,7 @@ namespace BA.Telemetry
                 unityVersion = UnityEngine.Application.unityVersion,
                 platform = UnityEngine.Application.platform.ToString()
             });
-            Flush(); // write immediately so the file exists
+            Flush(); 
         }
 
         public void SetUiVariant(string uiVariant)
