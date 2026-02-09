@@ -17,6 +17,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/10_Explore.unity
     guid: 1ac8bdd4a8c59494cb17bc11fd86511e
+  - enabled: 1
+    path: Assets/_Project/Scenes/20_Match.unity
+    guid: 490b5d93e59ceaf428b01511e2e7f59d
+  - enabled: 1
+    path: Assets/_Project/Scenes/30_Arcade.unity
+    guid: 25bf42fc5df167c4a939a0fe7899913d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
