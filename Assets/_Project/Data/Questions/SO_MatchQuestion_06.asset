@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed34945274685ee4cb675386e26b7209, type: 3}
+  m_Name: SO_MatchQuestion_06
+  m_EditorClassIdentifier: 
+  questionId: 5
+  minDifficulty: 2
+  maxDifficulty: 3
+  complexity: 2
+  weight: 1
+  promptText: Select all Allegory paintings
+  ruleType: 2
+  ruleValue: Allegory
+  matchMode: 1
+  negate: 0

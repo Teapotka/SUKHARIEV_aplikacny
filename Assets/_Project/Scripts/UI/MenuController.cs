@@ -11,6 +11,8 @@ namespace BA.UI
         [SerializeField] private string exploreScene = "10_Explore";
         [SerializeField] private string matchScene = "20_Match";
         [SerializeField] private string arcadeScene = "30_Arcade";
+        [SerializeField] private string historyScene = "02_ModeHistory";
+
 
         [Header("Data")]
         [SerializeField] private GameDataSO gameData;
@@ -31,6 +33,12 @@ namespace BA.UI
         {
             //LogModeStart("Arcade");
             SceneManager.LoadScene(arcadeScene);
+        }
+
+        public void PlayHistory()
+        {
+            //LogModeStart("Arcade");
+            SceneManager.LoadScene(historyScene);
         }
 
         //private void LogModeStart(string mode)

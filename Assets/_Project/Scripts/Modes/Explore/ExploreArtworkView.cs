@@ -89,6 +89,10 @@ namespace BA.Modes.Explore
         public void ToggleFlip()
         {
             if (_isFlipping) return;
+
+            if (item != null)
+                BA.Core.Progress.ProgressService.Instance?.MarkViewed(item.Id, "Explore");
+
             StartCoroutine(FlipRoutine());
         }
 

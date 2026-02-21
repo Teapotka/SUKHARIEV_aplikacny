@@ -1,4 +1,6 @@
+﻿using System;
 using UnityEngine;
+using BA.Modes.Arcade;
 
 public class PuzzleBoard : MonoBehaviour
 {
@@ -14,13 +16,30 @@ public class PuzzleBoard : MonoBehaviour
     private PuzzleTile[,] grid;
     private Vector2Int emptyCell;
     private PuzzleTile selectedTile;
+
     [SerializeField] private int shuffleMoves = 200;
+
     [SerializeField, Range(0f, 1f)]
     private float randomFlipChance = 0.5f;
 
     private Texture _frontTex;
     private Texture _backTex;
-    void Start()
+
+    private bool _inputBlocked;
+
+    public event Action Solved;
+    public event Action<int> MovesChanged;
+    public int MoveCount { get; private set; } = 0;
+    public int ShuffleMoves => shuffleMoves;
+
+    public void SetShuffleMoves(int value)
+    {
+        shuffleMoves = Mathf.Clamp(value, 20, 600);
+    }
+
+    public bool InputBlocked => _inputBlocked;
+
+    private void Start()
     {
         grid = new PuzzleTile[col, row];
         emptyCell = new Vector2Int(col - 1, row - 1);
@@ -35,6 +54,20 @@ public class PuzzleBoard : MonoBehaviour
         Generate();
         Shuffle();
         RandomizeFlips();
+        ResetMoveCount();
+    }
+
+    // ---------- Public control ----------
+
+    public void SetInputBlocked(bool blocked)
+    {
+        _inputBlocked = blocked;
+
+        if (blocked)
+        {
+            selectedTile?.Deselect();
+            selectedTile = null;
+        }
     }
 
     public void SetTextures(Texture front, Texture back)
@@ -49,11 +82,35 @@ public class PuzzleBoard : MonoBehaviour
 
         grid = new PuzzleTile[col, row];
         emptyCell = new Vector2Int(col - 1, row - 1);
+        selectedTile?.Deselect();
         selectedTile = null;
+
+        SetInputBlocked(false);
 
         Generate();
         Shuffle();
-        RandomizeFlips(); 
+        RandomizeFlips();
+        ResetMoveCount();
+    }
+
+    // ---------- Build / Clear ----------
+    public void ApplyConfig(int newCol, int newRow, int newShuffleMoves, float newFlipChance)
+    {
+       
+        shuffleMoves = Mathf.Max(0, newShuffleMoves);
+        randomFlipChance = Mathf.Clamp01(newFlipChance);
+    }
+
+    private void ResetMoveCount()
+    {
+        MoveCount = 0;
+        MovesChanged?.Invoke(MoveCount);
+    }
+
+    private void AddMove()
+    {
+        MoveCount++;
+        MovesChanged?.Invoke(MoveCount);
     }
 
     private void ClearBoard()
@@ -68,7 +125,7 @@ public class PuzzleBoard : MonoBehaviour
             }
     }
 
-    void Generate()
+    private void Generate()
     {
         if (anchor == null) anchor = transform;
 
@@ -79,7 +136,9 @@ public class PuzzleBoard : MonoBehaviour
 
                 var tile = Instantiate(tilePrefab, anchor);
                 tile.transform.localScale *= tileScale;
+
                 tile.SetTexturesForMaterials(_frontTex, _backTex);
+
                 tile.Init(this, x, y, col, row);
                 tile.transform.localPosition = GridToLocal(x, y);
 
@@ -99,13 +158,13 @@ public class PuzzleBoard : MonoBehaviour
         );
     }
 
-
-
     // ---------- Selection ----------
 
     public void SelectTile(PuzzleTile tile)
     {
-        Debug.Log("Selected: " + tile.name);
+        if (_inputBlocked) return;
+        if (tile == null) return;
+
         if (selectedTile == tile) return;
 
         selectedTile?.Deselect();
@@ -113,14 +172,15 @@ public class PuzzleBoard : MonoBehaviour
         selectedTile.Select();
     }
 
+    // ---------- Movement  ----------
 
     public void MoveSelected(Vector2Int dir)
     {
+        if (_inputBlocked) return;
         if (selectedTile == null) return;
 
         Vector2Int target = selectedTile.GridPos + dir;
         if (target != emptyCell) return;
-
 
         Vector2Int oldPos = selectedTile.GridPos;
 
@@ -132,41 +192,41 @@ public class PuzzleBoard : MonoBehaviour
 
         emptyCell = oldPos;
 
+        AddMove();
         CheckWin();
     }
 
     public void FlipSelected()
     {
+        if (_inputBlocked) return;
         if (selectedTile == null) return;
+
         selectedTile.Flip();
+        AddMove();
         CheckWin();
     }
 
+    // ---------- Shuffle (solvable) ----------
 
     public void Shuffle()
     {
         for (int i = 0; i < shuffleMoves; i++)
-        {
             MakeRandomValidMove();
-        }
     }
 
     private void MakeRandomValidMove()
     {
         var neighbors = GetMovableTiles();
-
         if (neighbors.Count == 0) return;
 
-        var tile = neighbors[Random.Range(0, neighbors.Count)];
+        var tile = neighbors[UnityEngine.Random.Range(0, neighbors.Count)];
         Move(tile);
     }
 
-    public bool Move(PuzzleTile tile)
+    public bool Move(PuzzleTile tile, bool countAsMove = true)
     {
         if (tile == null) return false;
-
-        if (!CanMove(tile.GridPos))
-            return false;
+        if (!CanMove(tile.GridPos)) return false;
 
         Vector2Int oldPos = tile.GridPos;
 
@@ -177,6 +237,10 @@ public class PuzzleBoard : MonoBehaviour
         tile.transform.localPosition = GridToLocal(emptyCell.x, emptyCell.y);
 
         emptyCell = oldPos;
+
+        if (countAsMove)
+            AddMove();
+
         return true;
     }
 
@@ -191,11 +255,11 @@ public class PuzzleBoard : MonoBehaviour
 
         Vector2Int[] dirs =
         {
-        Vector2Int.up,
-        Vector2Int.down,
-        Vector2Int.left,
-        Vector2Int.right
-    };
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
 
         foreach (var d in dirs)
         {
@@ -214,22 +278,21 @@ public class PuzzleBoard : MonoBehaviour
     private void RandomizeFlips()
     {
         for (int y = 0; y < row; y++)
-        {
             for (int x = 0; x < col; x++)
             {
                 var tile = grid[x, y];
                 if (tile == null) continue; 
 
-                bool front = Random.value > randomFlipChance;
+                bool front = UnityEngine.Random.value > randomFlipChance;
                 tile.SetFront(front);
             }
-        }
     }
+
+    // ---------- Win ----------
 
     public bool IsSolved()
     {
         for (int y = 0; y < row; y++)
-        {
             for (int x = 0; x < col; x++)
             {
                 if (x == emptyCell.x && y == emptyCell.y)
@@ -245,28 +308,21 @@ public class PuzzleBoard : MonoBehaviour
                 if (!tile.IsFront)
                     return false;
             }
-        }
 
         return true;
     }
 
     private void CheckWin()
     {
-        if (IsSolved())
-        {
-            Debug.Log("PUZZLE SOLVED");
-            OnSolved();
-        }
+        if (!IsSolved()) return;
+
+        Debug.Log("PUZZLE SOLVED");
+        OnSolved();
     }
 
     private void OnSolved()
     {
-        enabled = false;
-
-        // TODO:
-        // - play sound
-        // - highlight board
-        // - notify ArcadeModeController
+        SetInputBlocked(true);
+        Solved?.Invoke();
     }
-
 }

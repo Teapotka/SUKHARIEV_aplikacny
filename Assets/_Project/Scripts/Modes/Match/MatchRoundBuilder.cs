@@ -1,86 +1,94 @@
-using System;
 using System.Collections.Generic;
-using BA.Data;
 using UnityEngine;
+using BA.Data;
 
+namespace BA.Modes.Match
+{
     public static class MatchRoundBuilder
     {
-
-        public static MatchRound Build(
-            ArtCollectionSO collection,
-            MatchQuestionSO question,
-            int correctCount,
-            int distractorCount,
-            int seed = -1)
+        public static MatchRound Build(ArtCollectionSO collection, MatchQuestionSO q, int correctCount, int wrongCount)
         {
-            if (collection == null) throw new ArgumentNullException(nameof(collection));
-            if (question == null) throw new ArgumentNullException(nameof(question));
+            if (collection == null) return null;
+            int total = Mathf.Max(2, correctCount + wrongCount);
+            return Build(collection.Items, q, correctCount, total);
+        }
 
-            correctCount = Mathf.Max(0, correctCount);
-            distractorCount = Mathf.Max(0, distractorCount);
+        public static MatchRound Build(IReadOnlyList<ArtItemSO> pool, MatchQuestionSO q, int correctCount, int totalCards)
+        {
+            if (pool == null || pool.Count == 0 || q == null) return null;
 
-            var all = collection.Items;
-            var correctPool = new List<ArtItemSO>();
-            var wrongPool = new List<ArtItemSO>();
+            totalCards = Mathf.Clamp(totalCards, 2, 12);
+            correctCount = Mathf.Clamp(correctCount, 1, totalCards - 1);
 
-            for (int i = 0; i < all.Count; i++)
+            var matches = new List<ArtItemSO>();
+            var nonMatches = new List<ArtItemSO>();
+
+            for (int i = 0; i < pool.Count; i++)
             {
-                var it = all[i];
+                var it = pool[i];
                 if (it == null) continue;
 
-                if (question.IsMatch(it)) correctPool.Add(it);
-                else wrongPool.Add(it);
+                if (q.IsMatch(it)) matches.Add(it);
+                else nonMatches.Add(it);
             }
 
-            if (correctPool.Count == 0)
-                Debug.LogWarning($"[MatchRoundBuilder] No correct items for question '{question.QuestionId}'");
-
-            var rng = seed == -1 ? new System.Random() : new System.Random(seed);
-
-            var round = new MatchRound
+            if (matches.Count == 0)
             {
-                Question = question,
-                Correct = PickRandomUnique(correctPool, correctCount, rng),
-                Distractors = PickRandomUnique(wrongPool, distractorCount, rng)
+                return null;
+            }
+
+            while (correctCount > matches.Count && correctCount > 1)
+                correctCount--;
+
+            int needWrong = totalCards - correctCount;
+            while (needWrong > nonMatches.Count && totalCards > (correctCount + 1))
+            {
+                totalCards--;
+                needWrong = totalCards - correctCount;
+            }
+
+            if (correctCount > matches.Count) return null;
+            if (needWrong > nonMatches.Count) return null;
+
+            var correct = PickRandomUnique(matches, correctCount);
+            var wrong = PickRandomUnique(nonMatches, needWrong);
+
+            var table = new List<ArtItemSO>(correct.Count + wrong.Count);
+            table.AddRange(correct);
+            table.AddRange(wrong);
+            Shuffle(table);
+
+            return new MatchRound
+            {
+                Question = q,
+                Correct = correct,
+                TableItems = table
             };
-
-            round.TableItems = new List<ArtItemSO>(round.Correct.Count + round.Distractors.Count);
-            round.TableItems.AddRange(round.Correct);
-            round.TableItems.AddRange(round.Distractors);
-
-            Shuffle(round.TableItems, rng);
-
-            return round;
         }
 
-        private static List<ArtItemSO> PickRandomUnique(List<ArtItemSO> pool, int count, System.Random rng)
+        // ---------- Helpers ----------
+
+        private static List<ArtItemSO> PickRandomUnique(List<ArtItemSO> src, int count)
         {
-            var result = new List<ArtItemSO>();
-            if (pool == null || pool.Count == 0 || count <= 0) return result;
+            var copy = new List<ArtItemSO>(src);
+            Shuffle(copy);
 
-            count = Mathf.Min(count, pool.Count);
+            if (count >= copy.Count) return copy;
 
-            var indices = new int[pool.Count];
-            for (int i = 0; i < indices.Length; i++) indices[i] = i;
+            var res = new List<ArtItemSO>(count);
+            for (int i = 0; i < count; i++)
+                res.Add(copy[i]);
 
-            for (int i = indices.Length - 1; i > 0; i--)
-            {
-                int j = rng.Next(i + 1);
-                (indices[i], indices[j]) = (indices[j], indices[i]);
-            }
-
-            for (int k = 0; k < count; k++)
-                result.Add(pool[indices[k]]);
-
-            return result;
+            return res;
         }
 
-        private static void Shuffle(List<ArtItemSO> list, System.Random rng)
+        private static void Shuffle<T>(List<T> list)
         {
-            for (int i = list.Count - 1; i > 0; i--)
+            for (int i = 0; i < list.Count; i++)
             {
-                int j = rng.Next(i + 1);
+                int j = Random.Range(i, list.Count);
                 (list[i], list[j]) = (list[j], list[i]);
             }
         }
     }
+}
