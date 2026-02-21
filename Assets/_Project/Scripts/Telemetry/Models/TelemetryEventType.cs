@@ -11,6 +11,9 @@ namespace BA.Telemetry
         MODE_START,
         MODE_END,
 
+        ROUND_START,
+        ROUND_END,
+
         TASK_START,
         TASK_END,
 

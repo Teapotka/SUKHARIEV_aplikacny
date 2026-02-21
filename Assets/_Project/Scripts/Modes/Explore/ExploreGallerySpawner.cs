@@ -1,6 +1,7 @@
 using UnityEngine;
 using BA.Core;
 using BA.Core.Progress;
+using BA.Data;
 
 namespace BA.Modes.Explore
 {
@@ -21,6 +22,8 @@ namespace BA.Modes.Explore
         private void Start()
         {
             _rng = new System.Random(randomSeed);
+            var collection = GameContext.Instance?.GameData?.ActiveCollection;
+            ProgressService.Instance?.RegisterCollection(collection);
             SpawnUnlocked();
         }
 
@@ -46,22 +49,34 @@ namespace BA.Modes.Explore
                 return;
             }
 
-            // Clear old
-            for (int i = 0; i < slots.Length; i++)
+            if (ProgressService.Instance != null)
+                ProgressService.Instance.EnsureExploreInitializedForActiveCollection();
+
+            var unlockedIds = ProgressService.Instance != null
+                ? ProgressService.Instance.GetUnlockedExploreItemIds()
+                : null;
+
+            if (unlockedIds == null || unlockedIds.Count == 0)
             {
-                if (slots[i] == null) continue;
-                for (int c = slots[i].childCount - 1; c >= 0; c--)
-                    Destroy(slots[i].GetChild(c).gameObject);
+                Debug.LogWarning("[ExploreGallerySpawner] No unlocked IDs. Falling back to first 3 items.");
+                unlockedIds = new System.Collections.Generic.List<string>();
+                int fallback = Mathf.Min(3, collection.Count);
+                for (int i = 0; i < fallback; i++)
+                    if (collection.Items[i] != null && !string.IsNullOrWhiteSpace(collection.Items[i].Id))
+                        unlockedIds.Add(collection.Items[i].Id);
             }
 
-            int unlocked = ProgressService.Instance != null ? ProgressService.Instance.UnlockedCount : 5;
+            ClearSlots();
 
             int hardMax = Mathf.Min(10, collection.Count, slots.Length);
-            int spawnCount = Mathf.Min(unlocked, hardMax);
+            int spawnCount = Mathf.Min(unlockedIds.Count, hardMax);
 
             for (int i = 0; i < spawnCount; i++)
             {
-                var item = collection.Items[i];
+                var id = unlockedIds[i];
+                if (string.IsNullOrWhiteSpace(id)) continue;
+
+                ArtItemSO item = collection.GetById(id);
                 if (item == null) continue;
 
                 var slot = slots[i];
@@ -75,6 +90,18 @@ namespace BA.Modes.Explore
                 view.transform.localScale = Vector3.one;
 
                 view.Bind(item);
+            }
+        }
+
+        private void ClearSlots()
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var s = slots[i];
+                if (s == null) continue;
+
+                for (int c = s.childCount - 1; c >= 0; c--)
+                    Destroy(s.GetChild(c).gameObject);
             }
         }
 

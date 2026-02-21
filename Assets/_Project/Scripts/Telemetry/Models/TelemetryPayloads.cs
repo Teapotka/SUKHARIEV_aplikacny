@@ -23,4 +23,37 @@ namespace BA.Telemetry
         public float timeLimitSeconds;
         public bool helpEnabled;
     }
+
+    [Serializable]
+    public class DifficultyPayload
+    {
+        public int from;
+        public int to;
+        public int unlockedCount;
+    }
+
+
+    [Serializable]
+    public class ArcadeRoundStartPayload
+    {
+        public float timeLimitSeconds;
+        public int col;
+        public int row;
+        public string frontId;
+        public string backId;
+    }
+
+    [Serializable]
+    public class ArcadeRoundEndPayload
+    {
+        public bool win;
+        public string reason; // "solved" | "timeout"
+        public float timeLimitSeconds;
+        public float timeLeftSeconds;
+        public float durationSeconds;
+        public int col;
+        public int row;
+        public string frontId;
+        public string backId;
+    }
 }

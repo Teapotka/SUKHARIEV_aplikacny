@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce4ac71e1a42eab48912582b8af5d300, type: 3}
+  m_Name: Theme_Gamified
+  m_EditorClassIdentifier: 
+  style: 1
+  fontHeader: {fileID: 0}
+  fontBody: {fileID: 0}
+  fontButton: {fileID: 0}
+  textPrimary: {r: 1, g: 1, b: 1, a: 1}
+  textSecondary: {r: 1, g: 1, b: 1, a: 0.75}
+  accent: {r: 0.2, g: 0.9, b: 1, a: 1}
+  success: {r: 0.2, g: 1, b: 0.2, a: 1}
+  fail: {r: 1, g: 0.25, b: 0.25, a: 1}
+  panelSquare: {fileID: 0}
+  panelWide16x9: {fileID: 0}
+  buttonSquare: {fileID: 0}
+  buttonRound: {fileID: 0}
+  buttonHome: {fileID: 0}
+  iconHome: {fileID: 0}
+  iconCamera: {fileID: 0}
+  iconRotate: {fileID: 0}
+  iconFlip: {fileID: 0}
+  iconUp: {fileID: 0}
+  iconDown: {fileID: 0}
+  iconLeft: {fileID: 0}
+  iconRight: {fileID: 0}
+  sfxClick: {fileID: 0}
+  sfxCorrect: {fileID: 0}
+  sfxWrong: {fileID: 0}
+  sfxWin: {fileID: 0}
+  sfxWhoosh: {fileID: 0}
+  hoverScale: 1.06
+  pressScale: 1.1
+  animTime: 0.12
+  showScore: 1
+  showProgressBar: 1
+  showToasts: 1
+  showMedals: 1
+  showTimer: 1

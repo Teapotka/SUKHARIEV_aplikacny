@@ -36,7 +36,6 @@ public class MatchInputController : MonoBehaviour
                 var card = hit.collider.GetComponentInParent<DraggableCard3D>();
                 if (card != null)
                 {
-                    // If card is placed: click removes it (no dragging)
                     if (card.IsPlaced)
                     {
                         card.RemoveToStart();
@@ -53,7 +52,6 @@ public class MatchInputController : MonoBehaviour
         {
             active.Drag(cam, dragPlaneHeight, screenPos);
 
-            // If it snapped on trigger, stop controlling it
             if (active.JustSnapped)
                 active = null;
         }
@@ -70,10 +68,8 @@ public class MatchInputController : MonoBehaviour
 
         IsFrozen = frozen;
 
-        // Cancel current drag immediately
         if (active != null)
         {
-            // Return card back (or just stop it)
             active.CancelDragToStart();
             active = null;
         }
