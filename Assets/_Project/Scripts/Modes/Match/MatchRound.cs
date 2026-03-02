@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using BA.Data;
 
+namespace BA.Modes.Match
+{
     public class MatchRound
     {
         public MatchQuestionSO Question { get; set; }
@@ -11,3 +13,4 @@ using BA.Data;
 
         public List<ArtItemSO> TableItems { get; set; } = new();
     }
+}

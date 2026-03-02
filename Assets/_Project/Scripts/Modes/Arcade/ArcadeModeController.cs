@@ -10,7 +10,6 @@ namespace BA.Modes.Arcade
 {
     public class ArcadeModeController : BA.Modes.ModeControllerBase
     {
-        protected override GameModeType ModeType => GameModeType.Arcade;
 
         [SerializeField] private PuzzleBoard board;
 
@@ -37,13 +36,34 @@ namespace BA.Modes.Arcade
         [SerializeField] private ModeResultPopupView resultPopup;
 
         private float _timeLeft;
-        private float _startedAt;
+        private float _roundStartedAtRealtime;
         private bool _finished;
 
         private readonly HashSet<string> usedIds = new();
 
         private ArtItemSO currentFront;
         private ArtItemSO currentBack;
+
+        // ----- Telemetry: mode -----
+        private bool _modeStartLogged;
+        private bool _modeEndLogged;
+        private float _modeStartedAtRealtime;
+
+        // ----- Telemetry: round -----
+        private string _roundId;
+        private bool _roundActive;
+        private bool _roundEnded;
+
+        // ----- Telemetry: actions -----
+        private string _lastAction = "";
+        private int _actionsSinceFlush = 0;
+        private const int FlushEveryNActions = 25;
+
+        // ------ Telemetry: rage quit cache ------
+        private int _initialBackBaseline;
+        private int _lastMovesTotal;
+        private int _lastSlideMoves;
+        private int _lastFlipCount;
 
         private void Reset()
         {
@@ -66,6 +86,13 @@ namespace BA.Modes.Arcade
                 board.Solved -= HandleSolved;
                 board.MovesChanged -= HandleMovesChanged;
             }
+
+            if (!_modeEndLogged && _roundActive && !_roundEnded)
+            {
+                LogRageQuitIfNeeded("scene_unload");
+            }
+
+            LogModeEndIfNeeded("scene_unload");
         }
 
         private void Update()
@@ -124,9 +151,21 @@ namespace BA.Modes.Arcade
                 board.SetShuffleMoves(preset.shuffleMoves);
             }
 
+            LogModeStartIfNeeded();
+
+            _finished = false;
+            _roundActive = false;
+            _roundEnded = false;
+
             _finished = false;
             _timeLeft = Mathf.Max(1f, timeLimitSeconds);
-            _startedAt = Time.time;
+            _roundStartedAtRealtime = Time.realtimeSinceStartup;
+
+            _initialBackBaseline = 0;
+            _lastMovesTotal = 0;
+            _lastSlideMoves = 0;
+            _lastFlipCount = 0;
+
             timeBarView?.SetSeconds(_timeLeft, timeLimitSeconds);
 
             ResolveTimerViewIfNeeded();
@@ -161,12 +200,16 @@ namespace BA.Modes.Arcade
                 return;
             }
 
+            _roundId = System.Guid.NewGuid().ToString("N");
+
             var frontTex = currentFront.Image != null ? currentFront.Image.texture : null;
             var backTex = currentBack.Image != null ? currentBack.Image.texture : null;
 
             board.SetTextures(frontTex, backTex);
             board.RebuildNewPuzzle();
             board.SetInputBlocked(false);
+
+            _initialBackBaseline = board.InitialBackTileCount;
 
             if (sideLabels != null)
             {
@@ -181,16 +224,24 @@ namespace BA.Modes.Arcade
 
             TelemetryService.Instance?.Log(
                 TelemetryEventType.ROUND_START,
-                "Arcade",
+                modeName,
                 new ArcadeRoundStartPayload
                 {
+                    roundId = _roundId,
                     timeLimitSeconds = timeLimitSeconds,
                     col = board.col,
                     row = board.row,
                     frontId = currentFront.Id,
-                    backId = currentBack.Id
+                    backId = currentBack.Id,
+                    presetIndex = ProgressService.Instance != null ? ProgressService.Instance.ArcadePresetIndex : 0,
+                    unlockedCount = ProgressService.Instance != null ? ProgressService.Instance.UnlockedCount : 0,
+                    viewedCount = ProgressService.Instance != null ? ProgressService.Instance.ViewedCount : 0
                 }
             );
+            TelemetryService.Instance?.Flush();
+
+            _roundActive = true;
+            _roundEnded = false;
         }
 
         private void HandleSolved()
@@ -208,6 +259,38 @@ namespace BA.Modes.Arcade
 
             ResolveScoreViewIfNeeded();
             UpdateLiveScore();
+
+            _lastMovesTotal = moves;
+            if (board != null)
+            {
+                _lastSlideMoves = board.SlideMoveCount;
+                _lastFlipCount = board.FlipCount;
+            }
+
+            // ARCADE_ACTION: log move count changes
+            if (_roundActive && !_roundEnded && !string.IsNullOrWhiteSpace(_roundId))
+            {
+                TelemetryService.Instance?.Log(
+                    TelemetryEventType.ARCADE_ACTION,
+                    modeName,
+                    new ArcadeActionPayload
+                    {
+                        roundId = _roundId,
+                        action = string.IsNullOrWhiteSpace(_lastAction) ? "moves_changed" : _lastAction,
+                        moves = moves,
+                        timeLeftSeconds = _timeLeft
+                    }
+                );
+
+                _actionsSinceFlush++;
+                if (_actionsSinceFlush >= FlushEveryNActions)
+                {
+                    _actionsSinceFlush = 0;
+                    TelemetryService.Instance?.Flush();
+                }
+            }
+
+            _lastAction = ""; 
         }
 
         private void Finish(bool win, string reason)
@@ -217,7 +300,8 @@ namespace BA.Modes.Arcade
             if (board != null)
                 board.SetInputBlocked(true);
 
-            float duration = Time.time - _startedAt;
+            float duration = Time.realtimeSinceStartup - _roundStartedAtRealtime;
+            int moves = board != null ? board.MoveCount : 0;
 
             int finalScore = ComputeScore(_timeLeft, board != null ? board.MoveCount : 0);
             string medal = win ? GetMedal(finalScore) : "No medal";
@@ -247,22 +331,40 @@ namespace BA.Modes.Arcade
 
             Debug.Log(win ? "[Arcade] WIN" : "[Arcade] LOSE");
 
+            int movesTotal = board != null ? board.MoveCount : _lastMovesTotal;
+            int slideMoves = board != null ? board.SlideMoveCount : _lastSlideMoves;
+            int flipCount = board != null ? board.FlipCount : _lastFlipCount;
+            int initialBack = board != null ? board.InitialBackTileCount : _initialBackBaseline;
+
+            int errorCount = Mathf.Max(0, flipCount - initialBack);
+
             TelemetryService.Instance?.Log(
                 TelemetryEventType.ROUND_END,
-                "Arcade",
+                modeName,
                 new ArcadeRoundEndPayload
                 {
+                    roundId = _roundId,
                     win = win,
                     reason = reason,
                     timeLimitSeconds = timeLimitSeconds,
                     timeLeftSeconds = _timeLeft,
                     durationSeconds = duration,
+                    score = finalScore,
+                    medal = medal,
+                    moves = movesTotal,
+                    slideMoveCount = slideMoves,
+                    flipCount = flipCount,
+                    initialBackTileCount = initialBack,
+                    errorCount = errorCount,
                     col = board != null ? board.col : 0,
                     row = board != null ? board.row : 0,
                     frontId = currentFront != null ? currentFront.Id : "",
-                    backId = currentBack != null ? currentBack.Id : ""
+                    backId = currentBack != null ? currentBack.Id : "",
+                    presetIndex = ProgressService.Instance != null ? ProgressService.Instance.ArcadePresetIndex : 0
                 }
             );
+
+            _roundEnded = true;
 
             if (ProgressService.Instance != null && board != null)
             {
@@ -310,11 +412,26 @@ namespace BA.Modes.Arcade
         }
 
         // ---------- UI Buttons ----------
-        public void MoveUp() => board.MoveSelected(Vector2Int.down);
-        public void MoveDown() => board.MoveSelected(Vector2Int.up);
-        public void MoveLeft() => board.MoveSelected(Vector2Int.left);
-        public void MoveRight() => board.MoveSelected(Vector2Int.right);
-        public void FlipTile() => board.FlipSelected();
+        public void MoveUp() {
+            _lastAction = "move_up";
+            board.MoveSelected(Vector2Int.down); 
+        }
+        public void MoveDown() { 
+            _lastAction = "move_down";
+            board.MoveSelected(Vector2Int.up); 
+        }
+        public void MoveLeft() { 
+            _lastAction = "move_left";
+            board.MoveSelected(Vector2Int.left); 
+        }
+        public void MoveRight() {
+            _lastAction = "move_right";
+            board.MoveSelected(Vector2Int.right);
+        }
+        public void FlipTile() {
+            _lastAction = "flip";
+            board.FlipSelected(); 
+        }
 
         // ---------- View resolving ----------
         private void ResolveTimerViewIfNeeded()
@@ -473,6 +590,85 @@ namespace BA.Modes.Arcade
             if (it == null) return "";
             var tags = it.Tags != null ? string.Join(", ", it.Tags) : "";
             return $"{it.Title}\n{it.Author}\n{it.Style}\n{tags}";
+        }
+
+        // ----------- Telemetry helpers -----------
+        private void LogRageQuitIfNeeded(string reason)
+        {
+            if (string.IsNullOrWhiteSpace(_roundId)) return;
+
+            float duration = Time.realtimeSinceStartup - _roundStartedAtRealtime;
+            int moves = board.MoveCount;
+
+            int movesTotal = _lastMovesTotal;
+            int slideMoves = _lastSlideMoves;
+            int flipCount = _lastFlipCount;
+            int initialBack = _initialBackBaseline;
+
+            int errorCount = Mathf.Max(0, flipCount - initialBack);
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.RAGE_QUIT,
+                modeName,
+                new ArcadeRageQuitPayload
+                {
+                    reason = reason,
+                    roundId = _roundId,
+                    durationSeconds = duration,
+                    moves = movesTotal,
+                    slideMoveCount = slideMoves,
+                    flipCount = flipCount,
+                    initialBackTileCount = initialBack,
+                    errorCount = errorCount,
+                    timeLeftSeconds = _timeLeft,
+                    timeLimitSeconds = timeLimitSeconds,
+                    frontId = currentFront != null ? currentFront.Id : "",
+                    backId = currentBack != null ? currentBack.Id : ""
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogModeStartIfNeeded()
+        {
+            if (_modeStartLogged) return;
+            _modeStartLogged = true;
+            _modeStartedAtRealtime = Time.realtimeSinceStartup;
+
+            int itemCount = (board != null) ? (board.col * board.row) : 0;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.MODE_START,
+                modeName,
+                new ModeStartPayload
+                {
+                    itemCount = itemCount,
+                    timeLimitSeconds = timeLimitSeconds,
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogModeEndIfNeeded(string reason)
+        {
+            if (_modeEndLogged) return;
+            _modeEndLogged = true;
+
+            float duration = Time.realtimeSinceStartup - _modeStartedAtRealtime;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.MODE_END,
+                modeName,
+                new ArcadeModeEndPayload
+                {
+                    reason = reason,
+                    durationSeconds = duration,
+                    presetIndex = ProgressService.Instance != null ? ProgressService.Instance.ArcadePresetIndex : 0,
+                    unlockedCount = ProgressService.Instance != null ? ProgressService.Instance.UnlockedCount : 0,
+                    viewedCount = ProgressService.Instance != null ? ProgressService.Instance.ViewedCount : 0
+                }
+            );
+            TelemetryService.Instance?.Flush();
         }
     }
 }

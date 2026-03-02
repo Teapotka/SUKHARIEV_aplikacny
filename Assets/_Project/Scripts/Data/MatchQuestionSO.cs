@@ -35,12 +35,6 @@ namespace BA.Data
         [Range(1, 3)]
         [SerializeField] private int maxDifficulty = 3;
 
-        [Header("DDA Complexity (performance)")]
-        [SerializeField] private MatchQuestionComplexity complexity = MatchQuestionComplexity.Normal;
-
-        [Min(1)]
-        [SerializeField] private int weight = 1;
-
         [TextArea(2, 6)]
         [SerializeField] private string promptText;
 
@@ -58,16 +52,8 @@ namespace BA.Data
         public string QuestionId => questionId;
         public string PromptText => promptText;
 
-        public MatchRuleType RuleType => ruleType;
-        public string RuleValue => ruleValue;
         public TextMatchMode MatchMode => matchMode;
         public bool Negate => negate;
-
-        public int MinDifficulty => minDifficulty;
-        public int MaxDifficulty => maxDifficulty;
-
-        public MatchQuestionComplexity Complexity => complexity;
-        public int Weight => Mathf.Max(1, weight);
 
         public bool IsAllowedForDifficulty(int difficulty)
         {
@@ -94,7 +80,7 @@ namespace BA.Data
         {
             if (pool == null || pool.Count == 0) return false;
 
-            totalCards = Mathf.Clamp(totalCards, 2, 12);
+            totalCards = Mathf.Clamp(totalCards, 2, 10);
             correctCount = Mathf.Clamp(correctCount, 1, totalCards - 1);
             int needWrong = totalCards - correctCount;
 
@@ -137,18 +123,6 @@ namespace BA.Data
                 return string.Equals(source, value, StringComparison.OrdinalIgnoreCase);
 
             return source.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private void OnValidate()
-        {
-            questionId = questionId?.Trim();
-            ruleValue = ruleValue?.Trim();
-
-            minDifficulty = Mathf.Clamp(minDifficulty, 1, 3);
-            maxDifficulty = Mathf.Clamp(maxDifficulty, 1, 3);
-            if (maxDifficulty < minDifficulty) maxDifficulty = minDifficulty;
-
-            weight = Mathf.Max(1, weight);
         }
     }
 }

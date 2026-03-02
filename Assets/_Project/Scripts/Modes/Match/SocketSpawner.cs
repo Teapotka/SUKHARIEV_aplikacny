@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+namespace BA.Modes.Match
+{
     public class SocketSpawner : MonoBehaviour
     {
         [SerializeField] private MatchSocket prefab;
@@ -33,3 +35,4 @@ using UnityEngine;
             sockets.Clear();
         }
     }
+}

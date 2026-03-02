@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using BA.Data;
 using UnityEngine;
 
+namespace BA.Modes.Match
+{
     public class MatchAnswerTracker : MonoBehaviour
     {
         private SocketSpawner spawner;
@@ -30,3 +32,4 @@ using UnityEngine;
             return result;
         }
     }
+}

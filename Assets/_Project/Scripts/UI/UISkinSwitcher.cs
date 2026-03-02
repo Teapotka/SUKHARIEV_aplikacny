@@ -19,7 +19,6 @@ namespace BA.UI
                 ? SettingsService.Instance.Current.uiVariant
                 : UiVariant.Gamified;
 
-            Debug.LogError("[UISkinSwitcher] Theme " + variant);
 
 
             if (minimalRoot) minimalRoot.SetActive(variant == UiVariant.Minimal);

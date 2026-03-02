@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-
+namespace BA.Modes.Arcade
+{
     public class ArcadeCameraFlip : MonoBehaviour
     {
         [Header("Rotation")]
@@ -13,10 +14,10 @@ using UnityEngine.InputSystem;
         private Quaternion frontRot;
         private Quaternion backRot;
 
-    [SerializeField] private ArcadeSideLabels sideLabels;
-    [SerializeField] private SwapLRButtons swapLR;
+        [SerializeField] private ArcadeSideLabels sideLabels;
+        [SerializeField] private SwapLRButtons swapLR;
 
-    private void Awake()
+        private void Awake()
         {
             frontRot = transform.rotation;
             backRot = frontRot * Quaternion.Euler(0f, 180f, 0f);
@@ -43,7 +44,7 @@ using UnityEngine.InputSystem;
 
             sideLabels?.SetBackView(flipped, rotateDuration);
             swapLR?.Apply(flipped);
-    }
+        }
 
         private System.Collections.IEnumerator RotateRoutine(Quaternion target)
         {
@@ -63,3 +64,4 @@ using UnityEngine.InputSystem;
             rotating = false;
         }
     }
+}

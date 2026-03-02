@@ -17,7 +17,6 @@ namespace BA.UI
             if (!isOn) return;
             SettingsService.Instance?.SetUiVariant(UiVariant.Gamified);
 
-            Debug.LogError("[UIThemeManager] instance: " + SettingsService.Instance.Current.uiVariant);
 
         }
 
@@ -26,7 +25,6 @@ namespace BA.UI
             if (!isOn) return;
             SettingsService.Instance?.SetUiVariant(UiVariant.Minimal);
 
-            Debug.LogError("[UIThemeManager] instance: " + SettingsService.Instance.Current.uiVariant);
 
         }
 
@@ -56,7 +54,6 @@ namespace BA.UI
             if (gamifiedToggle != null) gamifiedToggle.SetIsOnWithoutNotify(v == UiVariant.Gamified);
             if (minimalToggle != null) minimalToggle.SetIsOnWithoutNotify(v == UiVariant.Minimal);
 
-            Debug.LogError("[UIThemeManager] Loaded: " + SettingsService.Instance.Current.uiVariant);
 
         }
 
@@ -74,7 +71,6 @@ namespace BA.UI
             else
                 SettingsService.Instance?.SetUiVariant(UiVariant.Gamified);
 
-            Debug.LogError("[UIThemeManager] instance: " + SettingsService.Instance.Current.uiVariant);
 
         }
 

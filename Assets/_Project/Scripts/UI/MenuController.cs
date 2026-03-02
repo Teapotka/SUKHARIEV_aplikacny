@@ -19,54 +19,23 @@ namespace BA.UI
 
         public void PlayExplore()
         {
-            //LogModeStart("Explore");
             SceneManager.LoadScene(exploreScene);
         }
 
         public void PlayMatch()
         {
-            //LogModeStart("Match");
             SceneManager.LoadScene(matchScene);
         }
 
         public void PlayArcade()
         {
-            //LogModeStart("Arcade");
             SceneManager.LoadScene(arcadeScene);
         }
 
         public void PlayHistory()
         {
-            //LogModeStart("Arcade");
             SceneManager.LoadScene(historyScene);
         }
-
-        //private void LogModeStart(string mode)
-        //{
-        //    if (TelemetryService.Instance == null || gameData == null) return;
-
-        //    var cfg = mode switch
-        //    {
-        //        "Explore" => gameData.GetConfig(GameModeType.Explore),
-        //        "Match" => gameData.GetConfig(GameModeType.Match),
-        //        "Arcade" => gameData.GetConfig(GameModeType.Arcade),
-        //        _ => null
-        //    };
-
-        //    if (cfg == null) return;
-
-        //    TelemetryService.Instance.Log(
-        //        TelemetryEventType.MODE_START,
-        //        mode,
-        //        new ModeStartPayload
-        //        {
-        //            itemCount = cfg.BaseItemCount,
-        //            timeLimitSeconds = cfg.TimeLimitSeconds,
-        //            helpEnabled = cfg.HelpEnabled
-        //        });
-
-        //    TelemetryService.Instance.Flush();
-        //}
 
         public void Quit()
         {

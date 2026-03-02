@@ -1,5 +1,6 @@
 using BA.Core.Progress;
 using BA.Data;
+using BA.Telemetry;
 using BA.UI;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +10,6 @@ namespace BA.Modes.Match
 {
     public class MatchModeController : BA.Modes.ModeControllerBase
     {
-        protected override GameModeType ModeType => GameModeType.Match;
 
         [Header("Content")]
         [SerializeField] private ArtCollectionSO collection;
@@ -30,9 +30,31 @@ namespace BA.Modes.Match
         private MatchRound currentRound;
         private ModeState _state;
 
-        private float _roundStartedAt;
+        private bool _modeStartLogged;
+        private bool _modeEndLogged;
+        private float _modeStartedAtRealtime;
+
+        private string _roundId;
+        private float _roundStartedAtRealtime;
+        private bool _roundActive;
+        private bool _roundEnded;
 
         private void Reset() => modeName = "Match";
+
+        private void OnEnable()
+        {
+            LogModeStartIfNeeded();
+        }
+
+        private void OnDisable()
+        {
+            if (!_modeEndLogged && _roundActive && !_roundEnded)
+            {
+                LogRageQuitIfNeeded("rage_quit");
+            }
+
+            LogModeEndIfNeeded("scene_unload");
+        }
 
         protected override void EnterState(ModeState state)
         {
@@ -107,7 +129,10 @@ namespace BA.Modes.Match
                 return;
             }
 
-            _roundStartedAt = Time.time;
+            _roundId = System.Guid.NewGuid().ToString("N");
+            _roundStartedAtRealtime = Time.realtimeSinceStartup;
+            _roundActive = false;
+            _roundEnded = false;
 
             boardView.SetPrompt(currentRound.Question.PromptText);
 
@@ -116,6 +141,10 @@ namespace BA.Modes.Match
 
             answerTracker.Bind(socketSpawner);
             answerTracker.ClearPlacements();
+
+            LogTaskStart(poolCount: pool.Count, totalCards: totalCards, correctCount: correctCount);
+
+            _roundActive = true;
         }
 
         public void OnCheckPressed()
@@ -163,7 +192,7 @@ namespace BA.Modes.Match
                 onContinue: () =>
                 {
                     resultPopup?.Hide();
-                    TransitionTo(ModeState.Play); 
+                    TransitionTo(ModeState.Play);
                 },
                 onHome: () =>
                 {
@@ -172,16 +201,18 @@ namespace BA.Modes.Match
                 }
             );
 
-            float duration = Time.time - _roundStartedAt;
+            float duration = Time.realtimeSinceStartup - _roundStartedAtRealtime;
 
-            bool hintUsed = false;
+            LogMatchResult(success, incorrect, allSlotsFilled, duration);
+            LogTaskEnd(success, incorrect, allSlotsFilled, duration);
+
+            _roundEnded = true;
 
             ProgressService.Instance?.RecordMatchRound(
                 success: success,
                 incorrect: incorrect,
                 durationSeconds: duration,
                 questionId: currentRound.Question != null ? currentRound.Question.QuestionId : "",
-                hintUsed: hintUsed,
                 sourceMode: "Match"
             );
 
@@ -201,6 +232,9 @@ namespace BA.Modes.Match
                 ? ProgressService.Instance.EffectiveMatchDifficultyLevel
                 : 1;
 
+            int matchDifficultyLevel = ProgressService.Instance != null
+                ? ProgressService.Instance.MatchDifficultyLevel : 0;
+
             int ddaOffset = ProgressService.Instance != null
                 ? ProgressService.Instance.MatchDdaOffset
                 : 0;
@@ -213,7 +247,7 @@ namespace BA.Modes.Match
             {
                 var q = questions[i];
                 if (q == null) continue;
-                if (!q.IsAllowedForDifficulty(effectiveLvl)) continue;
+                if (!q.IsAllowedForDifficulty(matchDifficultyLevel)) continue;
 
                 if (!IsQuestionFeasible(q, pool, totalCards, correctCount))
                     continue;
@@ -329,6 +363,143 @@ namespace BA.Modes.Match
         {
             actionButton?.SetText("Next");
             inputController?.SetFrozen(true);
+        }
+
+        // ---------- Telemetry helpers ----------
+        private void LogModeStartIfNeeded()
+        {
+            if (_modeStartLogged) return;
+            _modeStartLogged = true;
+            _modeStartedAtRealtime = Time.realtimeSinceStartup;
+
+            ProgressService.Instance?.EnsureExploreInitializedForActiveCollection();
+
+            int totalCards = 0;
+            int correctCount = 0;
+
+            if (ProgressService.Instance != null)
+            {
+                var cfg = ProgressService.Instance.GetMatchConfig();
+                totalCards = cfg.total;
+                correctCount = cfg.correct;
+
+            }
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.MODE_START,
+                modeName,
+                new ModeStartPayload
+                {
+                    itemCount = totalCards,
+                    timeLimitSeconds = 0f,
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogModeEndIfNeeded(string reason)
+        {
+            if (_modeEndLogged) return;
+            _modeEndLogged = true;
+
+            float duration = Time.realtimeSinceStartup - _modeStartedAtRealtime;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.MODE_END,
+                modeName,
+                new MatchModeEndPayload
+                {
+                    reason = reason,
+                    durationSeconds = duration,
+                    unlockedCount = ProgressService.Instance != null ? ProgressService.Instance.UnlockedCount : 0,
+                    viewedCount = ProgressService.Instance != null ? ProgressService.Instance.ViewedCount : 0,
+                    effectiveDifficulty = ProgressService.Instance != null ? ProgressService.Instance.EffectiveMatchDifficultyLevel : 1,
+                    ddaOffset = ProgressService.Instance != null ? ProgressService.Instance.MatchDdaOffset : 0
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogRageQuitIfNeeded(string reason)
+        {
+            if (string.IsNullOrWhiteSpace(_roundId)) return;
+
+            float roundDuration = Time.realtimeSinceStartup - _roundStartedAtRealtime;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.RAGE_QUIT,
+                modeName,
+                new MatchRageQuitPayload
+                {
+                    reason = reason,
+                    roundId = _roundId,
+                    questionId = currentRound?.Question != null ? currentRound.Question.QuestionId : "",
+                    durationSeconds = roundDuration
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogTaskStart(int poolCount, int totalCards, int correctCount)
+        {
+            var ps = ProgressService.Instance;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.TASK_START,
+                modeName,
+                new MatchTaskStartPayload
+                {
+                    roundId = _roundId,
+                    questionId = currentRound?.Question != null ? currentRound.Question.QuestionId : "",
+                    poolCount = poolCount,
+                    totalCards = totalCards,
+                    correctCards = correctCount,
+                    unlockedCount = ps != null ? ps.UnlockedCount : 0,
+                    viewedCount = ps != null ? ps.ViewedCount : 0,
+                    baseDifficulty = ps != null ? ps.MatchDifficultyLevel : 1,
+                    ddaOffset = ps != null ? ps.MatchDdaOffset : 0,
+                    effectiveDifficulty = ps != null ? ps.EffectiveMatchDifficultyLevel : 1,
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogTaskEnd(bool success, int incorrect, bool allSlotsFilled, float durationSeconds)
+        {
+            var ps = ProgressService.Instance;
+
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.TASK_END,
+                modeName,
+                new MatchTaskEndPayload
+                {
+                    roundId = _roundId,
+                    questionId = currentRound?.Question != null ? currentRound.Question.QuestionId : "",
+                    win = success,
+                    incorrect = incorrect,
+                    allSlotsFilled = allSlotsFilled,
+                    durationSeconds = durationSeconds,
+                    effectiveDifficulty = ps != null ? ps.EffectiveMatchDifficultyLevel : 1
+                }
+            );
+            TelemetryService.Instance?.Flush();
+        }
+
+        private void LogMatchResult(bool success, int incorrect, bool allSlotsFilled, float durationSeconds)
+        {
+            TelemetryService.Instance?.Log(
+                TelemetryEventType.MATCH_RESULT,
+                modeName,
+                new MatchResultPayload
+                {
+                    roundId = _roundId,
+                    questionId = currentRound?.Question != null ? currentRound.Question.QuestionId : "",
+                    win = success,
+                    incorrect = incorrect,
+                    allSlotsFilled = allSlotsFilled,
+                    durationSeconds = durationSeconds,
+                }
+            );
         }
     }
 }

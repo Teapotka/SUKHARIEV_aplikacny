@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-
+namespace BA.Modes.Arcade
+{
     public class ArcadeInputController : MonoBehaviour
     {
         [SerializeField] private Camera cam;
@@ -34,4 +35,4 @@ using UnityEngine.InputSystem;
             }
         }
     }
-
+}

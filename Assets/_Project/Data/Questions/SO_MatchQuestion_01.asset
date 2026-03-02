@@ -15,8 +15,6 @@ MonoBehaviour:
   questionId: 0
   minDifficulty: 1
   maxDifficulty: 3
-  complexity: 0
-  weight: 1
   promptText: Select all Renaissance paintings
   ruleType: 0
   ruleValue: Renaissance

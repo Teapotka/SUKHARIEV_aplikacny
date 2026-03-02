@@ -1,7 +1,8 @@
 using BA.Data;
 using UnityEngine;
 
-
+namespace BA.Modes.Match
+{
     public class ArtCardView : MonoBehaviour
     {
         [SerializeField] private MeshRenderer paintingRenderer;
@@ -48,3 +49,4 @@ using UnityEngine;
             gameObject.name = $"Card_{item.Id}";
         }
     }
+}

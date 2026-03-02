@@ -5,9 +5,10 @@ using System.IO;
 using TMPro;
 using UnityEngine;
 using BA.Core;       
-using BA.Data;       
+using BA.Data;
+using BA.Core.Progress;
 
-namespace BA.UI
+namespace BA.Modes.History
 {
     public class HistorySceneView : MonoBehaviour
     {
@@ -55,62 +56,6 @@ namespace BA.UI
 
         [SerializeField] private TMP_Text arcadeRecentHistoryText;
 
-        // ---------------- Data mirror  ----------------
-        [Serializable]
-        private class ProgressFile
-        {
-            public List<string> unlockedItemIds;
-            public List<string> viewedItemIds;
-
-            public int matchDifficultyLevel;
-            public int matchStreak;
-
-            public int matchDdaOffset;
-            public int matchFailStreak;
-
-            public List<MatchStat> matchHistory;
-
-            public int arcadePresetIndex;
-            public List<ArcadeStat> arcadeHistory;
-
-            public int xp;
-
-            public int arcadeLastScore;
-            public string arcadeLastMedal;
-            public int arcadeBestScore;
-            public string arcadeBestMedal;
-
-            public int version;
-        }
-
-        [Serializable]
-        private class MatchStat
-        {
-            public string timestampUtc;
-            public bool win;
-            public int incorrect;
-            public float duration;
-            public int effectiveDifficulty;
-            public string questionId;
-            public bool hintUsed;
-        }
-
-        [Serializable]
-        private class ArcadeStat
-        {
-            public string timestampUtc;
-            public bool win;
-            public string reason;
-
-            public int moves;
-
-            public float timeLimit;
-            public float timeLeft;
-            public float duration;
-
-            public int score;
-            public string medal;
-        }
 
         private string SavePath => Path.Combine(Application.persistentDataPath, fileName);
 
@@ -130,11 +75,11 @@ namespace BA.UI
                 return;
             }
 
-            ProgressFile data;
+            ProgressData data;
             try
             {
                 var json = File.ReadAllText(SavePath);
-                data = JsonUtility.FromJson<ProgressFile>(json);
+                data = JsonUtility.FromJson<ProgressData>(json);
             }
             catch (Exception e)
             {
@@ -178,14 +123,14 @@ namespace BA.UI
             Set(matchEffectiveDifficultyText, $"Effective: {eff}");
             Set(matchStreakText, $"Streak: {Mathf.Max(0, data.matchStreak)}");
 
-            var matchList = data.matchHistory ?? new List<MatchStat>();
+            var matchList = data.matchHistory ?? new List<MatchRoundStat>();
             WriteMatchAggregates(matchList);
             WriteMatchRecent(matchList);
 
             // ---------- ARCADE ----------
             Set(arcadePresetText, $"Preset: {data.arcadePresetIndex}");
 
-            var arcadeList = data.arcadeHistory ?? new List<ArcadeStat>();
+            var arcadeList = data.arcadeHistory ?? new List<ArcadeRoundStat>();
             WriteArcadeAggregates(arcadeList, data);
             WriteArcadeRecent(arcadeList);
         }
@@ -203,7 +148,7 @@ namespace BA.UI
         }
 
         // ---------------- MATCH helpers ----------------
-        private void WriteMatchAggregates(List<MatchStat> list)
+        private void WriteMatchAggregates(List<MatchRoundStat> list)
         {
             if (list == null || list.Count == 0)
             {
@@ -233,7 +178,7 @@ namespace BA.UI
             Set(matchAvgDurationText, $"Avg duration: {avgDur:0.0}s");
         }
 
-        private void WriteMatchRecent(List<MatchStat> list)
+        private void WriteMatchRecent(List<MatchRoundStat> list)
         {
             if (matchRecentHistoryText == null) return;
 
@@ -264,7 +209,7 @@ namespace BA.UI
         }
 
         // ---------------- ARCADE helpers ----------------
-        private void WriteArcadeAggregates(List<ArcadeStat> list, ProgressFile data)
+        private void WriteArcadeAggregates(List<ArcadeRoundStat> list, ProgressData data)
         {
             int bestScore = 0;
             string bestMedal = "";
@@ -330,7 +275,7 @@ namespace BA.UI
             Set(arcadeAvgDurationText, $"Avg duration: {avgDur:0.0}s");
         }
 
-        private void WriteArcadeRecent(List<ArcadeStat> list)
+        private void WriteArcadeRecent(List<ArcadeRoundStat> list)
         {
             if (arcadeRecentHistoryText == null) return;
 
