@@ -1,37 +1,63 @@
-using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.UI;
 
-public class SwapLRButtons : MonoBehaviour
+namespace BA.Modes.Arcade
 {
-    [Header("UI refs")]
-    [SerializeField] private RectTransform leftButton;
-    [SerializeField] private RectTransform rightButton;
-
-    [Header("Optional: text labels on buttons")]
-    [SerializeField] private TMP_Text leftLabel;
-    [SerializeField] private TMP_Text rightLabel;
-
-    private Vector2 leftPos;
-    private Vector2 rightPos;
-
-    private void Awake()
+    public class SwapLRButtons : MonoBehaviour
     {
-        if (leftButton) leftPos = leftButton.anchoredPosition;
-        if (rightButton) rightPos = rightButton.anchoredPosition;
-    }
+        [Header("Buttons (all skins)")]
+        [SerializeField] private Button[] leftButtons;
+        [SerializeField] private Button[] rightButtons;
 
-    public void Apply(bool flipped)
-    {
-        Debug.Log("[SwapLRButtons] Apply flipped=" + flipped);
-        if (!leftButton || !rightButton) return;
+        [Header("Effects (normal mapping)")]
+        [SerializeField] private UnityEvent onLeftEffect;
+        [SerializeField] private UnityEvent onRightEffect;
 
-        leftButton.anchoredPosition = flipped ? rightPos : leftPos;
-        rightButton.anchoredPosition = flipped ? leftPos : rightPos;
+        [Header("Safety")]
+        [Tooltip("Recommended ON: remove existing onClick listeners so only this router controls movement.\n" +
+                 "If OFF and your buttons already call movement methods, you'll get double actions.")]
+        [SerializeField] private bool clearExistingListeners = true;
 
-        if (leftLabel && rightLabel)
+        private bool _flipped;
+
+        private void Awake()
         {
-            leftLabel.text = flipped ? "R" : "L";
-            rightLabel.text = flipped ? "L" : "R";
+            Wire(leftButtons, HandleLeftPressed);
+            Wire(rightButtons, HandleRightPressed);
+        }
+
+        public void Apply(bool flipped)
+        {
+            _flipped = flipped;
+        }
+
+        private void Wire(Button[] buttons, UnityAction handler)
+        {
+            if (buttons == null) return;
+
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                var b = buttons[i];
+                if (b == null) continue;
+
+                if (clearExistingListeners)
+                    b.onClick.RemoveAllListeners();
+
+                b.onClick.AddListener(handler);
+            }
+        }
+
+        private void HandleLeftPressed()
+        {
+            if (!_flipped) onLeftEffect?.Invoke();
+            else onRightEffect?.Invoke();
+        }
+
+        private void HandleRightPressed()
+        {
+            if (!_flipped) onRightEffect?.Invoke();
+            else onLeftEffect?.Invoke();
         }
     }
 }

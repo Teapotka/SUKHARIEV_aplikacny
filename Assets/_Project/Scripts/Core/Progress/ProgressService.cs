@@ -53,7 +53,6 @@ namespace BA.Core.Progress
         public float duration;
         public int effectiveDifficulty;
         public string questionId;
-        public bool hintUsed;
     }
 
     [Serializable]
@@ -223,7 +222,6 @@ namespace BA.Core.Progress
             int incorrect,
             float durationSeconds,
             string questionId,
-            bool hintUsed,
             string sourceMode = "Match")
         {
             EnsureExploreInitializedForActiveCollection();
@@ -253,7 +251,6 @@ namespace BA.Core.Progress
                 duration = Mathf.Max(0f, durationSeconds),
                 effectiveDifficulty = EffectiveMatchDifficultyLevel,
                 questionId = questionId ?? "",
-                hintUsed = hintUsed
             });
 
             TrimTail(_data.matchHistory, Mathf.Max(1, maxMatchHistoryRecords));
@@ -304,6 +301,22 @@ namespace BA.Core.Progress
                 _data.matchDdaOffset = next;
                 _data.matchGamesSinceChange = 0;
                 Debug.Log($"[ProgressService] MatchDDA offset changed: {old} -> {next} (wins={wins}/{n}, avgIncorrect={avgIncorrect:0.00})");
+
+                string reason = next > old ? "harder" : "easier";
+                TelemetryService.Instance?.Log(
+                    TelemetryEventType.DDA_MATCH_CHANGED,
+                    "Match",
+                    new MatchDdaChangedPayload
+                    {
+                        fromOffset = old,
+                        toOffset = next,
+                        windowSize = n,
+                        wins = wins,
+                        avgIncorrect = avgIncorrect,
+                        reason = reason
+                    }
+                );
+                TelemetryService.Instance?.Flush();
             }
         }
 
@@ -701,6 +714,25 @@ namespace BA.Core.Progress
             {
                 _data.arcadePresetIndex = newIdx;
                 _data.arcadeGamesSinceChange = 0;
+
+                string reason = newIdx > idx ? "harder" : "easier";
+
+                TelemetryService.Instance?.Log(
+                    TelemetryEventType.DDA_ARCADE_CHANGED,
+                    "Arcade",
+                    new ArcadeDdaChangedPayload
+                    {
+                        fromPreset = idx,
+                        toPreset = newIdx,
+                        windowSize = n,
+                        wins = wins,
+                        timeouts = timeouts,
+                        avgWinTimeRatio = avgWinTimeRatio,
+                        avgWinMoves = avgWinMoves,
+                        reason = reason
+                    }
+                );
+                TelemetryService.Instance?.Flush();
             }
         }
 
@@ -721,31 +753,5 @@ namespace BA.Core.Progress
             if (extra > 0)
                 list.RemoveRange(0, extra);
         }
-    }
-
-    [Serializable]
-    public class UnlockPayload
-    {
-        public int from;
-        public int to;
-        public int max;
-        public string unlockedItemId;
-        public int streakRequired;
-    }
-
-    [Serializable]
-    public class ViewedPayload
-    {
-        public string itemId;
-        public int viewedCount;
-        public int unlockedCount;
-    }
-
-    [Serializable]
-    public class DifficultyPayload
-    {
-        public int from;
-        public int to;
-        public int unlockedCount;
     }
 }

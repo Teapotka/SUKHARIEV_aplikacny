@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using BA.Data;
 using UnityEngine;
 
+namespace BA.Modes.Match
+{
     public class CardSpawner : MonoBehaviour
     {
         [SerializeField] private ArtCardView prefab;
@@ -34,3 +36,4 @@ using UnityEngine;
             spawned.Clear();
         }
     }
+}

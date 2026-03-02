@@ -1,20 +1,23 @@
 using TMPro;
 using UnityEngine;
 
-public class MatchBoardView : MonoBehaviour
+namespace BA.Modes.Match
 {
-    [SerializeField] private TMP_Text promptText;
-    [SerializeField] private TMP_Text resultText;
-
-    public void SetPrompt(string prompt)
+    public class MatchBoardView : MonoBehaviour
     {
-        if (promptText) promptText.text = prompt ?? "";
-        if (resultText) resultText.text = "";
-    }
+        [SerializeField] private TMP_Text promptText;
+        [SerializeField] private TMP_Text resultText;
 
-    public void SetResult(bool success, int incorrect)
-    {
-        if (!resultText) return;
-        resultText.text = success ? "Correct!" : $"Not quite. Incorrect: {incorrect}";
+        public void SetPrompt(string prompt)
+        {
+            if (promptText) promptText.text = prompt ?? "";
+            if (resultText) resultText.text = "";
+        }
+
+        public void SetResult(bool success, int incorrect)
+        {
+            if (!resultText) return;
+            resultText.text = success ? "Correct!" : $"Not quite. Incorrect: {incorrect}";
+        }
     }
 }

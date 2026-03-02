@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace BA.Modes.Explore
 {
-    public class ExploreUnlockedLabel : MonoBehaviour
+    public class ExploreProgressHUD : MonoBehaviour
     {
         [SerializeField] private TMP_Text[] targets; 
 

@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class MatchInputController : MonoBehaviour
+namespace BA.Modes.Match
+{
+    public class MatchInputController : MonoBehaviour
     {
         [SerializeField] private Camera cam;
         [SerializeField] private LayerMask cardLayer;
@@ -12,7 +14,7 @@ public class MatchInputController : MonoBehaviour
         public bool IsFrozen { get; private set; }
 
 
-    private void Awake()
+        private void Awake()
         {
             if (cam == null) cam = Camera.main;
         }
@@ -26,54 +28,55 @@ public class MatchInputController : MonoBehaviour
 
             if (IsFrozen) return;
 
-        Vector2 screenPos = mouse.position.ReadValue();
+            Vector2 screenPos = mouse.position.ReadValue();
 
-        if (mouse.leftButton.wasPressedThisFrame)
-        {
-            var ray = cam.ScreenPointToRay(screenPos);
-            if (Physics.Raycast(ray, out var hit, 200f, cardLayer, QueryTriggerInteraction.Collide))
+            if (mouse.leftButton.wasPressedThisFrame)
             {
-                var card = hit.collider.GetComponentInParent<DraggableCard3D>();
-                if (card != null)
+                var ray = cam.ScreenPointToRay(screenPos);
+                if (Physics.Raycast(ray, out var hit, 200f, cardLayer, QueryTriggerInteraction.Collide))
                 {
-                    if (card.IsPlaced)
+                    var card = hit.collider.GetComponentInParent<DraggableCard3D>();
+                    if (card != null)
                     {
-                        card.RemoveToStart();
-                        return;
-                    }
+                        if (card.IsPlaced)
+                        {
+                            card.RemoveToStart();
+                            return;
+                        }
 
-                    active = card;
-                    active.BeginDrag(cam, dragPlaneHeight, screenPos);
+                        active = card;
+                        active.BeginDrag(cam, dragPlaneHeight, screenPos);
+                    }
                 }
+            }
+
+            if (mouse.leftButton.isPressed && active != null)
+            {
+                active.Drag(cam, dragPlaneHeight, screenPos);
+
+                if (active.JustSnapped)
+                    active = null;
+            }
+
+            if (mouse.leftButton.wasReleasedThisFrame && active != null)
+            {
+                active.EndDrag(cam, screenPos);
+                active = null;
             }
         }
 
-        if (mouse.leftButton.isPressed && active != null)
+        public void SetFrozen(bool frozen)
         {
-            active.Drag(cam, dragPlaneHeight, screenPos);
 
-            if (active.JustSnapped)
+            IsFrozen = frozen;
+
+            if (active != null)
+            {
+                active.CancelDragToStart();
                 active = null;
+            }
         }
 
-        if (mouse.leftButton.wasReleasedThisFrame && active != null)
-        {
-            active.EndDrag(cam, screenPos);
-            active = null;
-        }
     }
-
-    public void SetFrozen(bool frozen)
-    {
-
-        IsFrozen = frozen;
-
-        if (active != null)
-        {
-            active.CancelDragToStart();
-            active = null;
-        }
-    }
-
 }
 

@@ -15,8 +15,6 @@ MonoBehaviour:
   questionId: 5
   minDifficulty: 2
   maxDifficulty: 3
-  complexity: 2
-  weight: 1
   promptText: Select all Allegory paintings
   ruleType: 2
   ruleValue: Allegory

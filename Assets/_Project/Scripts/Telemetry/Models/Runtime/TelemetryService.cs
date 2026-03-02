@@ -47,17 +47,29 @@ namespace BA.Telemetry
                 unityVersion = UnityEngine.Application.unityVersion,
                 platform = UnityEngine.Application.platform.ToString()
             });
-            Flush(); 
+            Flush();
         }
 
         public void SetUiVariant(string uiVariant)
         {
             if (Session == null) return;
+            if (string.IsNullOrWhiteSpace(uiVariant)) return;
+
+            uiVariant = uiVariant.Trim();
 
             var old = Session.uiVariant;
+
+            if (string.Equals(old, uiVariant, StringComparison.OrdinalIgnoreCase))
+                return;
+
             Session.uiVariant = uiVariant;
 
-            Log(TelemetryEventType.UI_SWITCH, DefaultMode, new { from = old, to = uiVariant });
+            Log(TelemetryEventType.UI_SWITCH, DefaultMode, new UiSwitchPayload
+            {
+                from = old,
+                to = uiVariant
+            });
+
             Flush();
         }
 
@@ -69,10 +81,39 @@ namespace BA.Telemetry
                 return;
             }
 
-            var ev = TelemetryEvent.Create(Session, type, mode, payload);
+            var header = new TelemetryHeader
+            {
+                sessionId = Session.sessionId,
+                profileId = Session.profileId,
+                uiVariant = Session.uiVariant,
 
-            var line = JsonUtility.ToJson(ev);
+                timestampUtc = DateTime.UtcNow.ToString("o"),
+                eventType = type.ToString(),
+                mode = mode
+            };
+
+            string headerJson = JsonUtility.ToJson(header);
+            string payloadJson = payload == null ? "{}" : JsonUtility.ToJson(payload);
+
+            string line = ComposeWithRawPayload(headerJson, payloadJson);
+
+            //var ev = TelemetryEvent.Create(Session, type, mode, payload);
+
+            //var line = JsonUtility.ToJson(ev);
             _ndjsonBuffer.Add(line);
+        }
+
+        private static string ComposeWithRawPayload(string headerJson, string payloadJson)
+        {
+            if (string.IsNullOrEmpty(headerJson)) headerJson = "{}";
+            if (string.IsNullOrEmpty(payloadJson)) payloadJson = "{}";
+
+            // Ensure header ends with "}"
+            if (headerJson[headerJson.Length - 1] != '}')
+                headerJson += "}";
+
+            // Remove last "}" and append ,"payload":<raw> }
+            return headerJson.Substring(0, headerJson.Length - 1) + ",\"payload\":" + payloadJson + "}";
         }
 
         public void Flush()
@@ -98,5 +139,16 @@ namespace BA.Telemetry
             Log(TelemetryEventType.SESSION_END, DefaultMode, new SessionEndPayload { reason = "quit" });
             Flush();
         }
+    }
+    [Serializable]
+    internal class TelemetryHeader
+    {
+        public string sessionId;
+        public string profileId;
+        public string uiVariant;
+
+        public string timestampUtc;
+        public string eventType;
+        public string mode;
     }
 }

@@ -1,6 +1,8 @@
 using UnityEngine;
 
 
+namespace BA.Modes.Match
+{
     [RequireComponent(typeof(Collider))]
     public class DraggableCard3D : MonoBehaviour
     {
@@ -31,21 +33,21 @@ using UnityEngine;
         private Quaternion startRot;
         private bool dragging;
 
-    public bool IsPlaced => currentSocket != null;
-    public bool JustSnapped { get; private set; }
+        public bool IsPlaced => currentSocket != null;
+        public bool JustSnapped { get; private set; }
 
-    private MatchSocket currentSocket;
+        private MatchSocket currentSocket;
 
-    private void Awake() => view = GetComponent<ArtCardView>();
+        private void Awake() => view = GetComponent<ArtCardView>();
 
         public void BeginDrag(Camera cam, float planeY, Vector2 screenPos)
         {
             startPos = transform.position;
             startRot = transform.rotation;
 
-        dragRot = startRot * Quaternion.Euler(dragRotationOffsetEuler);
+            dragRot = startRot * Quaternion.Euler(dragRotationOffsetEuler);
 
-        dragging = true;
+            dragging = true;
         }
 
         public void Drag(Camera cam, float planeY, Vector2 screenPos)
@@ -94,50 +96,50 @@ using UnityEngine;
             transform.position = startPos;
             transform.rotation = startRot;
         }
-    public void RemoveToStart()
-    {
-        if (currentSocket != null)
+        public void RemoveToStart()
         {
-            currentSocket.Clear();
-            currentSocket = null;
-        }
+            if (currentSocket != null)
+            {
+                currentSocket.Clear();
+                currentSocket = null;
+            }
 
-        transform.position = startPos;
-        transform.rotation = startRot;
-        dragging = false;
-        JustSnapped = false;
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (!dragging || currentSocket != null) return;
-
-        var socket = other.GetComponentInParent<MatchSocket>();
-        if (socket == null) return;
-
-        if (socket.IsOccupied) return;
-
-        if (socket.TryPlace(view))
-        {
-            currentSocket = socket;
-
-            dragging = false;
-
-            JustSnapped = true; 
-        }
-    }
-
-    public void CancelDragToStart()
-    {
-        
-        if (!IsPlaced)
-        {
             transform.position = startPos;
             transform.rotation = startRot;
+            dragging = false;
+            JustSnapped = false;
         }
 
-        dragging = false;
-        JustSnapped = false;
+        private void OnTriggerEnter(Collider other)
+        {
+            if (!dragging || currentSocket != null) return;
+
+            var socket = other.GetComponentInParent<MatchSocket>();
+            if (socket == null) return;
+
+            if (socket.IsOccupied) return;
+
+            if (socket.TryPlace(view))
+            {
+                currentSocket = socket;
+
+                dragging = false;
+
+                JustSnapped = true;
+            }
+        }
+
+        public void CancelDragToStart()
+        {
+
+            if (!IsPlaced)
+            {
+                transform.position = startPos;
+                transform.rotation = startRot;
+            }
+
+            dragging = false;
+            JustSnapped = false;
+        }
     }
 }
-

@@ -21,6 +21,9 @@ namespace BA.Telemetry
         MATCH_RESULT,
         ARCADE_ACTION,
 
-        RAGE_QUIT
+        RAGE_QUIT,
+
+        DDA_MATCH_CHANGED,
+        DDA_ARCADE_CHANGED
     }
 }
