@@ -7,7 +7,6 @@ namespace BA.Modes.Arcade
     {
         [SerializeField] private Camera cam;
         [SerializeField] private LayerMask tileLayer;
-
         [SerializeField] private PuzzleBoard board;
 
         private void Awake()
@@ -19,12 +18,9 @@ namespace BA.Modes.Arcade
         {
             if (cam == null || board == null) return;
 
-            var mouse = Mouse.current;
-            if (mouse == null) return;
+            if (!TryGetPrimaryPressScreenPosition(out var screenPos))
+                return;
 
-            if (!mouse.leftButton.wasPressedThisFrame) return;
-
-            Vector2 screenPos = mouse.position.ReadValue();
             var ray = cam.ScreenPointToRay(screenPos);
 
             if (Physics.Raycast(ray, out var hit, 200f, tileLayer, QueryTriggerInteraction.Collide))
@@ -33,6 +29,28 @@ namespace BA.Modes.Arcade
                 if (tile != null)
                     board.SelectTile(tile);
             }
+        }
+
+        private static bool TryGetPrimaryPressScreenPosition(out Vector2 screenPos)
+        {
+            if (Touchscreen.current != null)
+            {
+                var touch = Touchscreen.current.primaryTouch;
+                if (touch.press.wasPressedThisFrame)
+                {
+                    screenPos = touch.position.ReadValue();
+                    return true;
+                }
+            }
+
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                screenPos = Mouse.current.position.ReadValue();
+                return true;
+            }
+
+            screenPos = default;
+            return false;
         }
     }
 }

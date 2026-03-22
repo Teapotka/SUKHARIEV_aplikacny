@@ -6068,52 +6068,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: eebb3ec1492d4e34bbc2121d94761228, type: 3}
---- !u!1 &1840899202
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1840899204}
-  - component: {fileID: 1840899203}
-  m_Layer: 0
-  m_Name: ServicesUI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1840899203
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1840899202}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 497e14d3457733d44aee9dfedfd69573, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minimalTheme: {fileID: 11400000, guid: 16e2feec6ec2a1540b2ff8443ade4d5f, type: 2}
-  gamifiedTheme: {fileID: 11400000, guid: 75c50adea9e7a1046a811eb03d525abb, type: 2}
---- !u!4 &1840899204
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1840899202}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1848583663
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7068,7 +7022,6 @@ SceneRoots:
   - {fileID: 557907255}
   - {fileID: 1742078318}
   - {fileID: 1445444430}
-  - {fileID: 1840899204}
   - {fileID: 1423863602826252009}
   - {fileID: 1996664152}
   - {fileID: 442526145}

@@ -108,11 +108,9 @@ namespace BA.Telemetry
             if (string.IsNullOrEmpty(headerJson)) headerJson = "{}";
             if (string.IsNullOrEmpty(payloadJson)) payloadJson = "{}";
 
-            // Ensure header ends with "}"
             if (headerJson[headerJson.Length - 1] != '}')
                 headerJson += "}";
 
-            // Remove last "}" and append ,"payload":<raw> }
             return headerJson.Substring(0, headerJson.Length - 1) + ",\"payload\":" + payloadJson + "}";
         }
 

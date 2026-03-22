@@ -8,6 +8,10 @@ namespace BA.Modes.Arcade
         [Header("Rotation")]
         [SerializeField] private float rotateDuration = 0.6f;
 
+        [Header("Mobile shortcut (optional)")]
+        [SerializeField] private bool enableTwoFingerTap = true;
+        [SerializeField] private float twoFingerTapMaxTime = 0.25f;
+
         private bool flipped = false;
         private bool rotating = false;
 
@@ -16,6 +20,9 @@ namespace BA.Modes.Arcade
 
         [SerializeField] private ArcadeSideLabels sideLabels;
         [SerializeField] private SwapLRButtons swapLR;
+
+        private float twoFingerTimer;
+        private bool twoFingerActive;
 
         private void Awake()
         {
@@ -26,11 +33,51 @@ namespace BA.Modes.Arcade
         private void Update()
         {
             var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            if (keyboard.spaceKey.wasPressedThisFrame)
-            {
+            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
                 Toggle();
+
+            if (enableTwoFingerTap)
+                DetectTwoFingerTap();
+        }
+
+        private void DetectTwoFingerTap()
+        {
+            if (Touchscreen.current == null) return;
+
+            var touches = Touchscreen.current.touches;
+
+            int pressedCount = 0;
+            bool anyReleasedThisFrame = false;
+
+            foreach (var t in touches)
+            {
+                if (t == null) continue;
+
+                if (t.press.isPressed) pressedCount++;
+                if (t.press.wasReleasedThisFrame) anyReleasedThisFrame = true;
+            }
+
+            if (pressedCount >= 2 && !twoFingerActive)
+            {
+                twoFingerActive = true;
+                twoFingerTimer = 0f;
+            }
+
+            if (twoFingerActive)
+            {
+                twoFingerTimer += Time.deltaTime;
+
+                if (anyReleasedThisFrame && twoFingerTimer <= twoFingerTapMaxTime)
+                {
+                    Toggle();
+                    twoFingerActive = false;
+                    return;
+                }
+
+                if (pressedCount < 2 || twoFingerTimer > twoFingerTapMaxTime)
+                {
+                    twoFingerActive = false;
+                }
             }
         }
 
