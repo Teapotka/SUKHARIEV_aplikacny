@@ -1,20 +1,20 @@
 using BA.Core.Progress;
 using BA.Data;
 using BA.Telemetry;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 namespace BA.Modes.Explore
 {
     public class ExploreModeController : BA.Modes.ModeControllerBase
     {
-
         private bool _modeStartLogged;
         private float _modeStartRealtime;
 
         private int _startUnlockedCount;
         private int _startViewedCount;
+
         private void Reset()
         {
             modeName = "Explore";
@@ -42,24 +42,61 @@ namespace BA.Modes.Explore
                     break;
             }
         }
+
         private void Update()
         {
             if (State != ModeState.Play) return;
 
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-                TrySelect();
+            if (TryGetPrimaryPressScreenPosition(out var screenPos))
+            {
+                if (IsPointerOverUI()) return;
+
+                TrySelect(screenPos);
+            }
         }
 
-        private void TrySelect()
+        private static bool TryGetPrimaryPressScreenPosition(out Vector2 screenPos)
+        {
+            if (Touchscreen.current != null)
+            {
+                var touch = Touchscreen.current.primaryTouch;
+
+                if (touch.press.wasPressedThisFrame)
+                {
+                    screenPos = touch.position.ReadValue();
+                    return true;
+                }
+            }
+
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                screenPos = Mouse.current.position.ReadValue();
+                return true;
+            }
+
+            screenPos = default;
+            return false;
+        }
+
+        private static bool IsPointerOverUI()
+        {
+            if (EventSystem.current == null) return false;
+
+            if (Touchscreen.current != null)
+            {
+                int touchId = Touchscreen.current.primaryTouch.touchId.ReadValue();
+                return EventSystem.current.IsPointerOverGameObject(touchId);
+            }
+
+            return EventSystem.current.IsPointerOverGameObject();
+        }
+
+        private void TrySelect(Vector2 screenPos)
         {
             var cam = Camera.main;
             if (cam == null) return;
 
-            if (Mouse.current == null) return;
-
-            Vector2 mousePos = Mouse.current.position.ReadValue();
-
-            var ray = cam.ScreenPointToRay(mousePos);
+            var ray = cam.ScreenPointToRay(screenPos);
             if (!Physics.Raycast(ray, out var hit, 200f)) return;
 
             var view = hit.collider.GetComponentInParent<ExploreArtworkView>();
@@ -67,7 +104,6 @@ namespace BA.Modes.Explore
 
             view.ToggleFlip();
         }
-
 
         private void LogModeStartIfNeeded()
         {
@@ -124,4 +160,3 @@ namespace BA.Modes.Explore
         }
     }
 }
-
